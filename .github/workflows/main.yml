@@ -47,9 +47,14 @@ jobs:
           go env -w GO111MODULE=on
           go env -w GOPRIVATE=github.com/PecozQ/*
 
-      - name: Configure Git for private module access via HTTPS + PAT
+      - name: Configure Git to use SSH instead of HTTPS
         run: |
-          git config --global url."https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+      - name: Set up SSH for GitHub access
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Go mod tidy and vendor
         if: steps.detect.outputs.changed_dir != ''
