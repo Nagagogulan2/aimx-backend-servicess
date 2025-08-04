@@ -49,6 +49,9 @@ jobs:
       - name: Configure Git for private module access via HTTPS with token
         run: git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
+      - name: Clone aimx-library (private module)
+        run: git clone https://github.com/PecozQ/aimx-library.git
+
       - name: Go mod tidy and vendor
         if: steps.detect.outputs.changed_dir != ''
         run: |
