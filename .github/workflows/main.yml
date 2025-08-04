@@ -32,13 +32,16 @@ jobs:
             echo "changed_dir=$CHANGED_DIR" >> $GITHUB_OUTPUT
           else
             echo "No changes detected under applications/. Skipping build."
-            exit 0
           fi
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.23.1'
+
+      - name: Set Go environment variables
+        run: |
+          go env -w GO111MODULE=on
 
       - name: Go mod tidy and vendor
         if: steps.detect.outputs.changed_dir != ''
