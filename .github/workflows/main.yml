@@ -34,6 +34,7 @@ jobs:
             echo "changed_dir=$CHANGED_DIR" >> $GITHUB_OUTPUT
           else
             echo "No changes detected under applications/. Skipping build."
+            exit 0
           fi
 
       - name: Set up Go
@@ -46,8 +47,9 @@ jobs:
           go env -w GO111MODULE=on
           go env -w GOPRIVATE=github.com/PecozQ/*
 
-      - name: Configure Git for private module access via HTTPS with token
-        run: git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+      - name: Configure Git for private module access via HTTPS + PAT
+        run: |
+          git config --global url."https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
       - name: Go mod tidy and vendor
         if: steps.detect.outputs.changed_dir != ''
