@@ -73,6 +73,16 @@ jobs:
         run: |
           IMAGE_NAME=nagagogulan/aimx-ext-${{ steps.detect.outputs.changed_dir }}
           docker build -t $IMAGE_NAME:latest applications/${{ steps.detect.outputs.changed_dir }}
+          
+      - name: Create external volume 'shared-data'
+        run: docker volume create shared-data
+    
+
+      - name: Run docker-compose for the service
+        if: steps.detect.outputs.changed_dir != ''
+        run: |
+          SERVICE_NAME=ext-${{ steps.detect.outputs.changed_dir }}
+          docker-compose -f docker-compose-ext-server.yml up -d $SERVICE_NAME   
 
       # ---------------------------
       # 🚀 Push Docker image to Docker Hub
