@@ -1,4 +1,4 @@
-name: Detect Changed Services & Build
+name: Detect Changed Services & Build & Deploy
 
 on:
   push:
@@ -74,12 +74,57 @@ jobs:
           IMAGE_NAME=nagagogulan/aimx-ext-${{ steps.detect.outputs.changed_dir }}
           docker build -t $IMAGE_NAME:latest applications/${{ steps.detect.outputs.changed_dir }}
 
-      - name: Create external volume 'shared-data'
-        run: docker volume create shared-data
-    
+      # ---------------------------
+      # 🚀 Push Docker image to Docker Hub
+      # ---------------------------
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Run docker-compose for the service
+      - name: Push Docker image
         if: steps.detect.outputs.changed_dir != ''
         run: |
-          SERVICE_NAME=ext-${{ steps.detect.outputs.changed_dir }}
-          docker-compose -f docker-compose-ext-server.yml up -d $SERVICE_NAME
+          IMAGE_NAME=nagagogulan/aimx-ext-${{ steps.detect.outputs.changed_dir }}
+          docker push $IMAGE_NAME:latest
+
+      # ---------------------------
+      # 🔧 Set up kubectl
+      # ---------------------------
+      - name: Set up kubectl
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" | base64 --decode > kubeconfig
+          export KUBECONFIG=$(pwd)/kubeconfig
+          kubectl version --client
+
+      # ---------------------------
+      # 🐳 Deploy to Kubernetes
+      # ---------------------------
+      - name: Deploy to Kubernetes
+        if: steps.detect.outputs.changed_dir != ''
+        run: |
+          export KUBECONFIG=$(pwd)/kubeconfig
+          IMAGE_NAME=nagagogulan/aimx-ext-${{ steps.detect.outputs.changed_dir }}
+
+          cat <<EOF | kubectl apply -f -
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: ext-${{ steps.detect.outputs.changed_dir }}
+            namespace: internal-aimx
+            labels:
+              app: ext-${{ steps.detect.outputs.changed_dir }}
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: ext-${{ steps.detect.outputs.changed_dir }}
+            template:
+              metadata:
+                labels:
+                  app: ext-${{ steps.detect.outputs.changed_dir }}
+              spec:
+                containers:
+                - name: ext-${{ steps.detect.outputs.changed_dir }}
+                  image: $IMAGE_NAME:latest
+                  ports:
+                  - containerPort: 8080
+          EOF
